@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 class tractatus_embeder(object):
-    def __init__(self, path_to_csv="tractatus.csv", pretrained_name="bert-base-cased", n_layers=4, start_split="train"):
+    def __init__(self, path_to_csv="tractatus_with_splits.csv", pretrained_name="bert-base-cased", n_layers=4, start_split="train"):
         """
 
         :type n_layers: int
@@ -67,7 +67,7 @@ class tractatus_embeder(object):
             with torch.no_grad():
                 outputs = self.model(input_ids, token_type_ids=segments_ids)
 
-                logging.debug(f"length of outputs: {len(outputs)}")
+                # logging.debug(f"length of outputs: {len(outputs)}")
 
                 last_hidden_state = outputs[0]  # last layer
                 encoded_layers = (last_hidden_state,) + outputs[2]  # add the last layer to all the others
@@ -103,25 +103,27 @@ class tractatus_embeder(object):
 
             return statement_embedding
 
-    def create_next_embedding(self):
-        for _, row in self._target_df.iterrows():
+    def create_next_embedding(self, all_splits=False):
+        if all_splits:
+            df = self.all_df
+        else:
+            df = self._target_df
+
+        for _, row in df.iterrows():
             embedding = self.embed_statement(row["text"])
 
             yield embedding, row
 
-    def write_embeddings_to_file(self, main_path="embeddings.tsv", meta_path="embeddings_titles"):
+    def write_embeddings_to_file(self, main_path="embeddings.tsv", meta_path="embeddings_meta.tsv"):
         with open(main_path, "w", newline="") as out_file, open(meta_path, "w", newline="") as meta_file:
-            out_writer = csv.writer(out_file, split="\t")
-            meta_writer = csv.writer(meta_file, split="\t")
+            out_writer = csv.writer(out_file, delimiter="\t")
+            meta_writer = csv.writer(meta_file, delimiter="\t")
 
-            meta_writer.write(["statement", "depth"])
+            meta_writer.writerow(["number", "depth"])
             for embedding, row in self.create_next_embedding():
-
-        pass
+                out_writer.writerow(embedding.tolist())
+                meta_writer.writerow([str(row["number"]), row["depth"]])
 
 if __name__ == "__main__":
     te = tractatus_embeder()
-    for i, embedding in enumerate(te.create_next_embedding()):
-        if i > 3: break
-        print(embedding)
-        continue
+    te.write_embeddings_to_file()

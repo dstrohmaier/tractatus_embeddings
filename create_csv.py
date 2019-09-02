@@ -18,7 +18,9 @@ def create_base_csv(source="tractatus-body.txt", destination="tractatus.csv"):
             if start:
                 if count != 0:
                     writer.writerow({"count": count, "depth": depth,
-                                     "number": number, "text": text[:-1]})
+                                     "number": number.replace(".", ";"), "text": text[:-1]})
+                    # the semicolon is dirty a bug fix
+                    # it avoids for the number to be interpreted as a float
 
                 first_space_ix = line.find(" ")
                 number = line[:first_space_ix]
@@ -28,6 +30,9 @@ def create_base_csv(source="tractatus-body.txt", destination="tractatus.csv"):
                 start = False
             else:
                 text += line
+
+        writer.writerow({"count": count, "depth": depth,
+                         "number": number.replace(".", ";") , "text": text[:-1]})
 
         return count
 
@@ -74,5 +79,6 @@ def add_splits(source="tractatus.csv", destination="tractatus_with_splits.csv", 
         writer.writerows([header_row]+content_rows)
 
 if __name__ == "__main__":
+    random.seed(42)
     row_count = create_base_csv()
     add_splits(row_count=row_count)
